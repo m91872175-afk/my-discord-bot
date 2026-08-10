@@ -13,7 +13,7 @@ client.once('clientReady', () => {
     console.log(`تم تسجيل الدخول بنجاح باسم ${client.user.tag}`);
 });
 
-// نظام الترحيب أول ما يدخل شخص جديد للسيرفر
+// نظام الترحيب
 client.on('guildMemberAdd', member => {
     const welcomeChannel = member.guild.channels.cache.find(channel => channel.name === 'welcome');
     if (!welcomeChannel) return;
@@ -29,74 +29,47 @@ client.on('guildMemberAdd', member => {
     welcomeChannel.send({ embeds: [embed] });
 });
 
-// الأوامر النصية والتحكم
+// الأوامر
 client.on('messageCreate', async message => {
     if (message.author.bot) return;
+    const args = message.content.split(' ');
+    const command = args[0];
 
-    // 1. قائمة المساعدة (!help)
-    if (message.content === '!help') {
-        const helpEmbed = new EmbedBuilder()
-            .setColor('#2ecc71')
-            .setTitle('🤖 قائمة أوامر بوت System 3np')
-            .setDescription('هذه هي الأوامر المتاحة حالياً في البوت:')
-            .addFields(
-                { name: '`!ping`', value: 'للتحقق من سرعة استجابة البوت.', inline: false },
-                { name: '`!clear [عدد]`', value: 'لمسح الرسائل (خاص بالإدارة).', inline: false },
-                { name: '`!timeout @الشخص [الدقائق]`', value: 'لإعطاء تايم أوت للعضو.', inline: false },
-                { name: '`السلام عليكم`', value: 'يرد عليك البوت تلقائياً.', inline: false }
-            )
-            .setFooter({ text: 'تم تطوير البوت بواسطة System 3np' });
-
-        return message.reply({ embeds: [helpEmbed] });
-    }
-
-    // 2. أمر البينج (!ping)
-    if (message.content === '!ping') {
-        message.reply('Pong! 🏓 البوت شغال وسريع.');
-    }
-
-    // 3. رد تلقائي على السلام
+    // الرد على السلام
     if (message.content === 'السلام عليكم') {
-        message.reply('وعليكم السلام ورحمة الله وبركاته! نورت السيرفر 🌹');
+        message.reply('عليكم السلام ورحمة الله وبركاته ارحب');
     }
 
-    // 4. أمر مسح الرسائل (!clear [عدد])
-    if (message.content.startsWith('!clear')) {
-        const args = message.content.split(' ');
+    // أمر مسح (مثال: مسح 5)
+    if (command === 'مسح') {
         const count = parseInt(args[1]);
-        
-        if (!count) {
-            return message.reply('اكتب عدد الرسائل اللي تبي تمسحها! مثال: `!clear 10`');
-        }
-        
+        if (!count) return message.reply('حدد عدد الرسائل!');
+        await message.channel.bulkDelete(count + 1, true).catch(() => {});
+        const msg = await message.channel.send(`تم حذف ${count} رسالة.`);
+        setTimeout(() => msg.delete().catch(() => {}), 3000);
+    }
+
+    // أمر انطم (مثال: انطم @فلان 1m)
+    if (command === 'انطم') {
+        const user = message.mentions.members.first();
+        if (!user) return message.reply('حدد الشخص!');
         try {
-            await message.channel.bulkDelete(count + 1, true);
-            const msg = await message.channel.send(`تم مسح ${count} رسالة بنجاح!`);
-            setTimeout(() => msg.delete().catch(() => {}), 3000);
+            await user.timeout(60 * 1000, 'تم إسكاته بواسطة الإدارة');
+            message.channel.send(`تم إسكات ${user.user.tag} لمدة دقيقة.`);
         } catch (err) {
-            message.reply('عذراً، تأكد من صلاحياتي أو أن الرسائل ليست أقدم من 14 يوماً!');
+            message.reply('ما قدرت، تأكد من صلاحياتي!');
         }
     }
 
-    // 5. أمر التايم أوت (!timeout @الشخص [الدقائق])
-    if (message.content.startsWith('!timeout')) {
-        if (!message.member.permissions.has('ModerateMembers')) {
-            return message.reply('ما عندك صلاحية تسوي تايم أوت!');
-        }
-
+    // أمر بنعالي (الباند)
+    if (command === 'بنعالي') {
         const user = message.mentions.members.first();
-        const args = message.content.split(' ');
-        const minutes = parseInt(args[2]);
-
-        if (!user || !minutes) {
-            return message.reply('الطريقة الصحيحة: `!timeout @الشخص [عدد الدقائق]`');
-        }
-
+        if (!user) return message.reply('حدد الشخص اللي تبي تعطيه "بنعالي"! 👟');
         try {
-            await user.timeout(minutes * 60 * 1000, 'تم إعطاؤه تايم أوت بواسطة الإدارة');
-            message.channel.send(`تم إعطاء تايم أوت لـ ${user.user.tag} لمدة ${minutes} دقيقة.`);
+            await user.ban({ reason: 'تم تصريفه بنعالي!' });
+            message.channel.send(`تم طرد ${user.user.tag} بالنعالي بنجاح! 👟💥`);
         } catch (err) {
-            message.reply('ما قدرنا نعطيه تايم أوت، تأكد أن رتبة البوت أعلى من رتبته ولديك الصلاحيات!');
+            message.reply('ما قدرت أطرده، تأكد أن رتبتي أعلى من رتبته!');
         }
     }
 });
